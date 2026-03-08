@@ -9,23 +9,31 @@ const progress = () => {
   const interval = parseInt(getArg("--interval", 100));
   const length = parseInt(getArg("--length", 30));
   const color = getArg("--color", null);
-
   let colorprefix = '';
 
   if (color && /^#[0-9A-Fa-f]{6}$/.test(color)) {
-    let r = parseInt(color.substring(0, 2), 16);
-    let g = parseInt(color.substring(2, 4), 16);
-    let b = parseInt(color.substring(4, 6), 16);
+    let r = parseInt(color.substring(1, 3), 16);
+    let g = parseInt(color.substring(3, 5), 16);
+    let b = parseInt(color.substring(5, 7), 16);
     colorprefix = `\x1b[38;2;${r};${g};${b}m`;
   }
 
-  for (let i = 0; i <= length; i++) {
-    let percent = Math.round((i / length) * 100);
-    let bar = '█'.repeat(i) + ' '.repeat(length - i);
-  
-    process.stdout.write(`\r[${colorprefix}${bar}\x1b[0m] ${percent}%`);
+  const totalSteps = Math.ceil(duration / interval);
+  const stepDelay = Math.floor(duration / totalSteps);
 
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, interval);
+  for (let step = 0; step <= totalSteps; step++) {
+    const ratio = step / totalSteps;
+    const percent = Math.round(ratio * 100);
+    const filledLength = Math.round(ratio * length);
+
+    const fBar = '█'.repeat(filledLength);
+    const emptyBar = ' '.repeat(length - filledLength);
+
+    process.stdout.write(`\r[${colorprefix}${fBar}\x1b[0m${emptyBar}] ${percent}%`);
+
+    if (step < totalSteps) {
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, stepDelay);
+    }
   }
 
   process.stdout.write('\nDone!\n');
